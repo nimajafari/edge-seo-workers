@@ -1,0 +1,23 @@
+{
+  "name": "edge-seo-workers",
+  "version": "1.0.0",
+  "description": "Production-ready Cloudflare Workers for solving common technical SEO problems at the edge",
+  "private": true,
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "seo",
+    "edge-seo",
+    "technical-seo",
+    "htmlrewriter"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.0",
+    "vitest": "^2.0.0",
+    "wrangler": "^3.80.0"
+  }
+}

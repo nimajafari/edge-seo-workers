@@ -1,0 +1,17 @@
+name = "seo-redirect-map"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Route the Worker to the URL patterns you want it to handle.
+# Uncomment and customize before deploying.
+#
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# To use Workers KV for large redirect maps, uncomment the binding below
+# and switch to the KV variant of src/index.js (see the README).
+#
+# [[kv_namespaces]]
+# binding = "REDIRECTS_KV"
+# id = "your-kv-namespace-id-here"

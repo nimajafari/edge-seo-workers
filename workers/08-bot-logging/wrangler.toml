@@ -1,0 +1,11 @@
+name = "seo-bot-logging"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Enable Workers Logs to capture console.log output in the dashboard
+[observability]
+enabled = true
+
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]

@@ -1,0 +1,7 @@
+name = "seo-security-headers"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]

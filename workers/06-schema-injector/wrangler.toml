@@ -1,0 +1,12 @@
+name = "seo-schema-injector"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# For sites with dynamic schema data stored in KV:
+# [[kv_namespaces]]
+# binding = "SCHEMA_KV"
+# id = "your-kv-namespace-id-here"

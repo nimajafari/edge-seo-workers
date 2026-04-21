@@ -1,0 +1,12 @@
+name = "seo-hreflang-injector"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# routes = [
+#   { pattern = "example.com/*", zone_name = "example.com" }
+# ]
+
+# For large locale maps, bind a KV namespace:
+# [[kv_namespaces]]
+# binding = "HREFLANG_KV"
+# id = "your-kv-namespace-id-here"

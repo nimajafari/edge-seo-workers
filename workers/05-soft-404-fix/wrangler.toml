@@ -1,0 +1,8 @@
+name = "seo-soft-404-fix"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# routes = [
+#   { pattern = "example.com/products/*", zone_name = "example.com" },
+#   { pattern = "example.com/search", zone_name = "example.com" }
+# ]

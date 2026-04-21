@@ -1,0 +1,7 @@
+{
+  "/old-product-page": "/products/new-slug",
+  "/blog/2020/outdated-post": "/blog/updated-post",
+  "/services/legacy-name": "/services/current-name",
+  "/about-us.html": "/about",
+  "/fr/produits": "/fr/products"
+}

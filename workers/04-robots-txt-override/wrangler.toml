@@ -1,0 +1,9 @@
+name = "seo-robots-txt"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Route only the specific paths you're overriding — saves Worker invocations.
+# routes = [
+#   { pattern = "example.com/robots.txt", zone_name = "example.com" },
+#   { pattern = "example.com/ads.txt", zone_name = "example.com" }
+# ]
