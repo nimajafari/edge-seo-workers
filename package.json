@@ -4,7 +4,8 @@
   "description": "Production-ready Cloudflare Workers for solving common technical SEO problems at the edge",
   "private": true,
   "scripts": {
-    "test": "vitest"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "cloudflare",

@@ -37,6 +37,19 @@ function computeCanonical(url) {
 }
 
 /**
+ * Minimal HTML attribute escaper. URL.toString() already percent-encodes most
+ * dangerous characters, but escaping before interpolating into raw HTML is the
+ * correct habit — and keeps this Worker consistent with the hreflang injector.
+ */
+function escapeAttr(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
  * Shared state between the two handlers. The head handler needs to know
  * whether the canonical handler fired before the </head> closing tag.
  */
@@ -67,7 +80,7 @@ class HeadHandler {
     head.onEndTag((endTag) => {
       if (!this.state.found) {
         endTag.before(
-          `<link rel="canonical" href="${this.correctUrl}">`,
+          `<link rel="canonical" href="${escapeAttr(this.correctUrl)}">`,
           { html: true }
         );
       }

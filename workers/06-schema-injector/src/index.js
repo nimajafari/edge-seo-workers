@@ -1,11 +1,18 @@
 /**
  * 06 — JSON-LD Schema Injector
  *
- * Injects structured data (JSON-LD) into the <head> based on URL patterns.
+ * Injects structured data (JSON-LD) before </body> based on URL patterns.
  * Handles:
  *   - Multiple schema types per page (Product + Breadcrumb, Article + Organization, etc.)
  *   - Avoiding duplicate injection if the page already has the same @type
  *   - HTML escaping inside the JSON-LD script block
+ *
+ * We inject at </body> rather than </head> on purpose: HTMLRewriter streams in
+ * document order, so the dedupe tracker has only seen <head> scripts by the time
+ * </head> closes. A lot of CMSs and SEO plugins emit JSON-LD at the end of <body>
+ * (Yoast, RankMath, etc.). Deciding at </body> means the tracker has seen every
+ * existing block first, so dedupe is reliable. Google reads JSON-LD anywhere in
+ * the document, so placement at the end of <body> is fine.
  *
  * Customize buildSchemaFor() to return whatever schema your pages need.
  */
@@ -104,16 +111,16 @@ class ExistingSchemaTracker {
 }
 
 /**
- * Appends new JSON-LD blocks before </head>, skipping any @types that are
- * already present on the page.
+ * Appends new JSON-LD blocks before </body>, skipping any @types that are
+ * already present anywhere on the page.
  */
 class SchemaInjector {
   constructor(schemas, tracker) {
     this.schemas = schemas;
     this.tracker = tracker;
   }
-  element(head) {
-    head.onEndTag((endTag) => {
+  element(body) {
+    body.onEndTag((endTag) => {
       for (const schema of this.schemas) {
         const type = schema['@type'];
         if (type && this.tracker.existingTypes.has(type)) {
@@ -148,7 +155,7 @@ export default {
 
     return new HTMLRewriter()
       .on('script[type="application/ld+json"]', tracker)
-      .on('head', new SchemaInjector(schemas, tracker))
+      .on('body', new SchemaInjector(schemas, tracker))
       .transform(response);
   },
 };

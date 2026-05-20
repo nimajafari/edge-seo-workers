@@ -51,7 +51,7 @@ After deploy, audit at:
 
 ## Critical warnings
 
-- **HSTS is sticky.** Once a browser receives `Strict-Transport-Security` with a long `max-age`, it will *refuse* to connect over HTTP for that duration — even if you later roll back the Worker. Test with a short `max-age` (e.g., 300 seconds) first. Only enable `includeSubDomains` if every subdomain supports HTTPS.
+- **HSTS is sticky.** Once a browser receives `Strict-Transport-Security` with a long `max-age`, it will *refuse* to connect over HTTP for that duration — even if you later roll back the Worker. This Worker ships a deliberately short default (`max-age=300`, no `includeSubDomains`) so a mistake self-heals in five minutes. Once you've confirmed everything is HTTPS-only, graduate to `max-age=31536000; includeSubDomains` (the comment in `src/index.js` shows the exact value). Only enable `includeSubDomains` if every subdomain supports HTTPS.
 - **HSTS `preload` is permanent.** Adding `preload` and submitting to the [HSTS preload list](https://hstspreload.org/) is effectively irreversible for months. Only do this on domains you're confident will stay HTTPS-only forever.
 - **Content-Security-Policy can break everything.** This worker does *not* include a CSP by default because a misconfigured one blocks legitimate scripts, styles, and images and takes the site down visually. If you want CSP, roll it out in [report-only mode](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy-Report-Only) first, collect violation reports for a week, then enforce.
 - **`X-Frame-Options: SAMEORIGIN` breaks legitimate embeds.** If partners embed your site (pricing widgets, booking tools, etc.), this header will break those. Use `frame-ancestors` in CSP for more granular control.

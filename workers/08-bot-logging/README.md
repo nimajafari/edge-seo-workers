@@ -1,6 +1,6 @@
 # 08 — Bot Logging
 
-Log verified search crawler and AI bot requests at the edge. Does NOT modify the response — the bot sees exactly what a user would see.
+Log search crawler and AI bot requests at the edge, annotated with Cloudflare's verified-bot status. Does NOT modify the response — the bot sees exactly what a user would see.
 
 ## Use cases
 
@@ -25,6 +25,8 @@ The default implementation identifies bots by User-Agent pattern match. This is:
 - **Spoofable** — anyone can set `User-Agent: Googlebot`. For rough analytics it's fine; for decisions that depend on trust (like rate-limiting or content changes), don't rely on it alone.
 
 Cloudflare also exposes `request.cf.verifiedBotCategory` — a server-side flag that Cloudflare sets based on its own verification (reverse DNS, IP range, etc.). The Worker logs this alongside the UA match so you can cross-reference in analytics.
+
+By default the Worker logs **every** UA match and records the verification result as a field, so spoofed traffic is captured but clearly distinguishable. If you only want verified bots in your logs, set `REQUIRE_VERIFICATION = true` at the top of `src/index.js` — UA-only matches with no Cloudflare verification are then skipped entirely.
 
 For production-grade verification, do reverse-DNS in your log pipeline (not in the Worker hot path). Google publishes the [verification procedure](https://developers.google.com/search/docs/crawling-indexing/verifying-googlebot).
 

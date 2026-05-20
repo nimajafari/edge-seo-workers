@@ -63,8 +63,9 @@ If your redirect map exceeds ~5,000 entries, bundling it in the Worker is wastef
 
 ## Gotchas
 
+- **Exact-match only, and case-sensitive.** Lookups are an exact match on `url.pathname`. `/old-page` will **not** match `/old-page/` (trailing slash) or `/Old-Page` (different case) — these are the most common misses in real migrations. Add every variant you expect to your map, or normalize the path before lookup (e.g. lowercase it and strip a trailing slash). Pick one trailing-slash convention and redirect to it consistently.
 - **Redirect chains.** If a path in your map points to another path that's *also* in the map, the Worker only redirects once per request. The browser handles the second hop. That's intentional — you should flatten chains in the map itself.
-- **Query string preservation.** If you're cleaning up tracking params during a migration, set `PRESERVE_QUERY_STRING = false` and handle UTMs separately.
+- **Query string preservation.** With `PRESERVE_QUERY_STRING = true`, the incoming query is carried over **only when the destination has no query of its own**. If a target already includes `?foo=bar`, the incoming query is dropped rather than merged — so don't rely on this to combine params. If you're cleaning up tracking params during a migration, set `PRESERVE_QUERY_STRING = false` and handle UTMs separately.
 - **Cache interaction.** By default, redirect responses from Workers are not cached by Cloudflare's edge cache. For very high-traffic redirects, explicitly cache them with `Cache-Control: public, max-age=3600` on the response to reduce Worker invocations.
 
 ## How to extend this

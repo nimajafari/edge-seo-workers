@@ -52,6 +52,10 @@ function rewriteStatus(response, newStatus) {
   // Clone headers so we can modify them freely.
   const headers = new Headers(response.headers);
 
+  // Strip the internal origin->Worker signal header so it never leaks to the
+  // client or downstream caches.
+  headers.delete(SIGNAL_HEADER);
+
   // Signal to CDNs and downstream caches not to cache the old 200.
   headers.set('cache-control', 'no-store');
 

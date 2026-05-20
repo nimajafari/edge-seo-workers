@@ -1,33 +1,43 @@
 /**
- * Example test for Worker 01 (Redirect Map) using @cloudflare/vitest-pool-workers.
+ * Tests for Worker 01 (Redirect Map), running in the real Workers runtime via
+ * @cloudflare/vitest-pool-workers.
  *
  * To run:
  *   npm install
- *   npx vitest
+ *   npm test
  *
- * This is a starting template. Each Worker in workers/ should have a matching
- * test file that covers the critical branches — redirect logic, content-type
- * guards, canonical rules, etc. Tests in CI catch 90% of the regressions that
- * would otherwise surface as a Google Search Console alert weeks later.
+ * Outbound fetch() (the pass-through-to-origin path) is mocked with the
+ * `fetchMock` agent from `cloudflare:test` rather than by reassigning the
+ * global `fetch`, which the runtime doesn't allow.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { fetchMock, createExecutionContext } from 'cloudflare:test';
 
 // Import the Worker handler. Adjust the path if you restructure the repo.
 import worker from '../workers/01-redirect-map/src/index.js';
 
-// Mock the bundled redirects.json.
+// Mock the bundled redirects.json. The '/loop' self-reference exercises the
+// loop-prevention branch.
 vi.mock('../workers/01-redirect-map/src/redirects.json', () => ({
   default: {
     '/old-page': '/new-page',
     '/another-old': '/another-new',
+    '/loop': '/loop',
   },
 }));
+
+beforeAll(() => {
+  fetchMock.activate();
+  fetchMock.disableNetConnect();
+});
+
+afterEach(() => fetchMock.assertNoPendingInterceptors());
 
 describe('Redirect Map Worker', () => {
   it('redirects a mapped path with 301', async () => {
     const request = new Request('https://example.com/old-page');
-    const response = await worker.fetch(request);
+    const response = await worker.fetch(request, {}, createExecutionContext());
 
     expect(response.status).toBe(301);
     expect(response.headers.get('location')).toBe('https://example.com/new-page');
@@ -35,41 +45,37 @@ describe('Redirect Map Worker', () => {
 
   it('preserves query string on redirect', async () => {
     const request = new Request('https://example.com/old-page?utm_source=test');
-    const response = await worker.fetch(request);
+    const response = await worker.fetch(request, {}, createExecutionContext());
 
     expect(response.status).toBe(301);
     expect(response.headers.get('location')).toContain('utm_source=test');
   });
 
   it('passes through unmapped paths to origin', async () => {
-    // Mock global fetch to verify it gets called for unmapped paths.
-    const originalFetch = global.fetch;
-    global.fetch = vi.fn(() => new Response('origin response', { status: 200 }));
+    fetchMock
+      .get('https://example.com')
+      .intercept({ path: '/some-other-page' })
+      .reply(200, 'origin response');
 
     const request = new Request('https://example.com/some-other-page');
-    const response = await worker.fetch(request);
+    const response = await worker.fetch(request, {}, createExecutionContext());
 
-    expect(global.fetch).toHaveBeenCalledOnce();
     expect(response.status).toBe(200);
-
-    global.fetch = originalFetch;
+    expect(await response.text()).toBe('origin response');
   });
 
-  it('does not redirect if target resolves to same path (loop prevention)', async () => {
-    // Mock the redirects to create a self-referencing entry.
-    vi.doMock('../workers/01-redirect-map/src/redirects.json', () => ({
-      default: { '/loop': '/loop' },
-    }));
-
-    const originalFetch = global.fetch;
-    global.fetch = vi.fn(() => new Response('origin', { status: 200 }));
+  it('does not redirect a self-referencing entry (loop prevention)', async () => {
+    // '/loop' maps to '/loop' — the Worker must pass through to origin instead
+    // of redirecting the URL to itself.
+    fetchMock
+      .get('https://example.com')
+      .intercept({ path: '/loop' })
+      .reply(200, 'origin');
 
     const request = new Request('https://example.com/loop');
-    const response = await worker.fetch(request);
+    const response = await worker.fetch(request, {}, createExecutionContext());
 
-    // Should pass through instead of redirecting to itself.
     expect(response.status).toBe(200);
-
-    global.fetch = originalFetch;
+    expect(await response.text()).toBe('origin');
   });
 });

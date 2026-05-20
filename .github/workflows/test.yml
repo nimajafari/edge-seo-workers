@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # This repo intentionally does not commit a lockfile (see .gitignore), so
+      # use `npm install` rather than `npm ci`, which would require one.
+      - run: npm install
+
+      - run: npm test

@@ -16,9 +16,13 @@
  * Values here are a sensible baseline. Tune to your site's needs.
  */
 const SECURITY_HEADERS = {
-  // Force HTTPS for 1 year, include subdomains, eligible for HSTS preload list.
-  // Only enable includeSubDomains and preload if ALL subdomains support HTTPS.
-  'strict-transport-security': 'max-age=31536000; includeSubDomains',
+  // HSTS is sticky and hard to undo (see README). Start SHORT and conservative:
+  // a 5-minute max-age with no includeSubDomains/preload, so a misconfiguration
+  // self-heals quickly. Once you've confirmed every page (and every subdomain)
+  // is HTTPS-only, graduate to the production value:
+  //   'max-age=31536000; includeSubDomains'   // 1 year, all subdomains
+  //   'max-age=31536000; includeSubDomains; preload'  // + HSTS preload list
+  'strict-transport-security': 'max-age=300',
 
   // Prevent MIME-sniffing attacks.
   'x-content-type-options': 'nosniff',
@@ -26,16 +30,18 @@ const SECURITY_HEADERS = {
   // Control how much Referer information is sent on outbound links.
   'referrer-policy': 'strict-origin-when-cross-origin',
 
-  // Control which browser features the site can use.
-  // Disable Topics API / FLoC by default.
-  'permissions-policy': 'browsing-topics=(), interest-cohort=()',
+  // Control which browser features the site can use. browsing-topics=() opts
+  // out of the Topics API. (FLoC's interest-cohort token is dead — browsers no
+  // longer recognize it — so it's intentionally omitted.)
+  'permissions-policy': 'browsing-topics=()',
 
   // Prevent clickjacking. Use 'SAMEORIGIN' if you embed your own site in iframes.
   'x-frame-options': 'SAMEORIGIN',
 
-  // Legacy XSS filter — deprecated in modern browsers, but still useful for old ones.
-  // Safe to leave in place.
-  'x-xss-protection': '1; mode=block',
+  // X-XSS-Protection: 0 is the modern recommendation (OWASP, Google). The old
+  // '1; mode=block' value introduced its own XSS vectors in legacy Chrome/Edge,
+  // and the auditors now expect it explicitly disabled.
+  'x-xss-protection': '0',
 };
 
 /**
@@ -55,6 +61,10 @@ const PERFORMANCE_HEADERS = {
  * Remove headers that leak information about the backend stack.
  * Information disclosure isn't a direct vulnerability but reduces attack surface
  * and cleans up SEO audits.
+ *
+ * Note: 'server' is best-effort. Cloudflare sets `Server: cloudflare` at the
+ * edge AFTER this Worker runs, so deleting it here strips an origin-provided
+ * value but the response the client sees will still carry Cloudflare's own.
  */
 const HEADERS_TO_REMOVE = [
   'x-powered-by',

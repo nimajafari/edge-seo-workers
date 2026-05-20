@@ -51,11 +51,23 @@ edge-seo-workers/
 │   ├── 02-canonical-rewriter/
 │   └── ...
 ├── tests/
-│   └── redirect-map.test.js  # Example test using vitest-pool-workers
+│   ├── redirect-map.test.js       # Worker 01 (redirect logic, loop prevention)
+│   └── canonical-rewriter.test.js # Worker 02 (HTMLRewriter rewrite/inject)
+├── vitest.config.js               # Runs tests in the Workers runtime (workerd)
+├── .github/workflows/test.yml     # CI: runs the suite on every push / PR
 ├── package.json
 ├── LICENSE
 └── README.md
 ```
+
+Run the suite with:
+
+```bash
+npm install
+npm test
+```
+
+Tests run inside the real Workers runtime via [`@cloudflare/vitest-pool-workers`](https://developers.cloudflare.com/workers/testing/vitest-integration/), so APIs like `HTMLRewriter` and `request.cf` behave exactly as they do in production.
 
 ## How to use this repo
 
