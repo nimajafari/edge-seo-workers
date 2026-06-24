@@ -29,7 +29,7 @@ Each Worker in this repo is self-contained, deployable on its own, and solves a 
 Clone the repo and pick a Worker to deploy:
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/edge-seo-workers.git
+git clone https://github.com/nimajafari/edge-seo-workers.git
 cd edge-seo-workers/workers/01-redirect-map
 npm install
 npx wrangler login
