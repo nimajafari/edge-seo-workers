@@ -6,30 +6,32 @@
  * whole reason the suite runs through @cloudflare/vitest-pool-workers.
  */
 
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { fetchMock, createExecutionContext } from 'cloudflare:test';
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
+import { createExecutionContext } from 'cloudflare:test';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 
 import worker from '../workers/02-canonical-rewriter/src/index.js';
 
-beforeAll(() => {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-});
+const server = setupServer();
 
-afterEach(() => fetchMock.assertNoPendingInterceptors());
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
-/** Reply to the origin fetch with an HTML document. */
-function mockHtmlOrigin(intercept, html) {
-  fetchMock
-    .get('https://example.com')
-    .intercept(intercept)
-    .reply(200, html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+/** Reply to the origin fetch for `path` with an HTML document. */
+function mockHtmlOrigin(path, html) {
+  server.use(
+    http.get(`https://example.com${path}`, () =>
+      HttpResponse.text(html, { headers: { 'content-type': 'text/html; charset=utf-8' } })
+    )
+  );
 }
 
 describe('Canonical Rewriter Worker', () => {
   it('rewrites an existing canonical: HTTPS + strips tracking params + no trailing slash', async () => {
     mockHtmlOrigin(
-      { path: '/page/', query: { utm_source: 'newsletter' } },
+      '/page/',
       '<html><head><link rel="canonical" href="http://example.com/page/?utm_source=newsletter"></head><body>hi</body></html>'
     );
 
@@ -43,7 +45,7 @@ describe('Canonical Rewriter Worker', () => {
 
   it('injects a canonical when the page has none', async () => {
     mockHtmlOrigin(
-      { path: '/no-canonical' },
+      '/no-canonical',
       '<html><head><title>No canonical here</title></head><body>hi</body></html>'
     );
 
@@ -56,7 +58,7 @@ describe('Canonical Rewriter Worker', () => {
 
   it('does not inject a second canonical when one already exists', async () => {
     mockHtmlOrigin(
-      { path: '/has-canonical' },
+      '/has-canonical',
       '<html><head><link rel="canonical" href="https://example.com/has-canonical"></head><body>hi</body></html>'
     );
 
@@ -68,10 +70,11 @@ describe('Canonical Rewriter Worker', () => {
   });
 
   it('passes non-HTML responses through untouched', async () => {
-    fetchMock
-      .get('https://example.com')
-      .intercept({ path: '/data.json' })
-      .reply(200, '{"a":1}', { headers: { 'content-type': 'application/json' } });
+    server.use(
+      http.get('https://example.com/data.json', () =>
+        HttpResponse.text('{"a":1}', { headers: { 'content-type': 'application/json' } })
+      )
+    );
 
     const request = new Request('https://example.com/data.json');
     const response = await worker.fetch(request, {}, createExecutionContext());

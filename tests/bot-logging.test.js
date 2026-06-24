@@ -7,24 +7,27 @@
  * waitOnExecutionContext() to let it finish before asserting.
  */
 
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
-import { fetchMock, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
+import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 
 import worker from '../workers/08-bot-logging/src/index.js';
 
-beforeAll(() => {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-});
+const server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 afterEach(() => {
-  fetchMock.assertNoPendingInterceptors();
+  server.resetHandlers();
   vi.restoreAllMocks();
 });
 
+afterAll(() => server.close());
+
 /** The Worker always passes the request through to origin. */
 function passthrough(path) {
-  fetchMock.get('https://example.com').intercept({ path }).reply(200, 'ok');
+  server.use(http.get(`https://example.com${path}`, () => HttpResponse.text('ok')));
 }
 
 async function run(path, userAgent) {

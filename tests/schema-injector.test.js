@@ -7,23 +7,25 @@
  * so the dedupe tracker has already seen those blocks.
  */
 
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
-import { fetchMock, createExecutionContext } from 'cloudflare:test';
+import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
+import { createExecutionContext } from 'cloudflare:test';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 
 import worker from '../workers/06-schema-injector/src/index.js';
 
-beforeAll(() => {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-});
+const server = setupServer();
 
-afterEach(() => fetchMock.assertNoPendingInterceptors());
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 function mockHtmlOrigin(path, html) {
-  fetchMock
-    .get('https://example.com')
-    .intercept({ path })
-    .reply(200, html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+  server.use(
+    http.get(`https://example.com${path}`, () =>
+      HttpResponse.text(html, { headers: { 'content-type': 'text/html; charset=utf-8' } })
+    )
+  );
 }
 
 async function fetchBody(path) {
@@ -60,10 +62,11 @@ describe('Schema Injector Worker', () => {
   });
 
   it('passes non-HTML responses through untouched', async () => {
-    fetchMock
-      .get('https://example.com')
-      .intercept({ path: '/feed.xml' })
-      .reply(200, '<rss></rss>', { headers: { 'content-type': 'application/xml' } });
+    server.use(
+      http.get('https://example.com/feed.xml', () =>
+        HttpResponse.text('<rss></rss>', { headers: { 'content-type': 'application/xml' } })
+      )
+    );
 
     const body = await fetchBody('/feed.xml');
     expect(body).toBe('<rss></rss>');

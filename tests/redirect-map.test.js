@@ -6,13 +6,16 @@
  *   npm install
  *   npm test
  *
- * Outbound fetch() (the pass-through-to-origin path) is mocked with the
- * `fetchMock` agent from `cloudflare:test` rather than by reassigning the
- * global `fetch`, which the runtime doesn't allow.
+ * Outbound fetch() (the pass-through-to-origin path) is mocked with MSW, which
+ * vitest-pool-workers wires into the runtime's fetch. `onUnhandledRequest:
+ * 'error'` makes any unexpected origin call fail the test (the old
+ * `disableNetConnect()` behaviour).
  */
 
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
-import { fetchMock, createExecutionContext } from 'cloudflare:test';
+import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest';
+import { createExecutionContext } from 'cloudflare:test';
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
 
 // Import the Worker handler. Adjust the path if you restructure the repo.
 import worker from '../workers/01-redirect-map/src/index.js';
@@ -27,12 +30,11 @@ vi.mock('../workers/01-redirect-map/src/redirects.json', () => ({
   },
 }));
 
-beforeAll(() => {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-});
+const server = setupServer();
 
-afterEach(() => fetchMock.assertNoPendingInterceptors());
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 describe('Redirect Map Worker', () => {
   it('redirects a mapped path with 301', async () => {
@@ -52,10 +54,11 @@ describe('Redirect Map Worker', () => {
   });
 
   it('passes through unmapped paths to origin', async () => {
-    fetchMock
-      .get('https://example.com')
-      .intercept({ path: '/some-other-page' })
-      .reply(200, 'origin response');
+    server.use(
+      http.get('https://example.com/some-other-page', () =>
+        HttpResponse.text('origin response')
+      )
+    );
 
     const request = new Request('https://example.com/some-other-page');
     const response = await worker.fetch(request, {}, createExecutionContext());
@@ -67,10 +70,9 @@ describe('Redirect Map Worker', () => {
   it('does not redirect a self-referencing entry (loop prevention)', async () => {
     // '/loop' maps to '/loop' — the Worker must pass through to origin instead
     // of redirecting the URL to itself.
-    fetchMock
-      .get('https://example.com')
-      .intercept({ path: '/loop' })
-      .reply(200, 'origin');
+    server.use(
+      http.get('https://example.com/loop', () => HttpResponse.text('origin'))
+    );
 
     const request = new Request('https://example.com/loop');
     const response = await worker.fetch(request, {}, createExecutionContext());
